@@ -43,6 +43,11 @@ var (
 			BorderForeground(colorGreen).
 			Padding(0, 1)
 
+	cardInsertPreviewBorder = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(colorRed).
+				Padding(0, 1)
+
 	// Values
 	activeValueStyle = lipgloss.NewStyle().
 				Bold(true).

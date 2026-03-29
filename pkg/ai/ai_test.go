@@ -11,12 +11,12 @@ func playFullGame(t *testing.T, rng *rand.Rand) {
 	t.Helper()
 
 	bots := []Strategy{
-		NewGreedyBot(rand.New(rand.NewSource(rng.Int63()))),
-		NewGreedyBot(rand.New(rand.NewSource(rng.Int63()))),
-		NewRandomBot(rand.New(rand.NewSource(rng.Int63()))),
+		NewSmartBot(rand.New(rand.NewSource(rng.Int63()))),
+		NewSmartBot(rand.New(rand.NewSource(rng.Int63()))),
+		NewSmartBot(rand.New(rand.NewSource(rng.Int63()))),
 	}
 
-	g, err := engine.NewGame(3, []string{"Greedy1", "Greedy2", "Random"}, rng)
+	g, err := engine.NewGame(3, []string{"Smart1", "Smart2", "Smart3"}, rng)
 	if err != nil {
 		t.Fatal(err)
 	}

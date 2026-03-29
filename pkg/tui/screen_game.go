@@ -61,11 +61,7 @@ func NewGameModel(numPlayers int) (GameModel, tea.Cmd) {
 
 	bots := make([]ai.Strategy, numPlayers)
 	for i := 1; i < numPlayers; i++ {
-		if i%2 == 1 {
-			bots[i] = ai.NewGreedyBot(rand.New(rand.NewSource(rng.Int63())))
-		} else {
-			bots[i] = ai.NewRandomBot(rand.New(rand.NewSource(rng.Int63())))
-		}
+		bots[i] = ai.NewSmartBot(rand.New(rand.NewSource(rng.Int63())))
 	}
 
 	m := GameModel{
@@ -229,11 +225,15 @@ func (m GameModel) handleShowSelect(key string) (GameModel, tea.Cmd) {
 		return m.executeShow()
 	case "escape":
 		if m.isScoutAndShow {
-			// In Scout & Show flow, Esc cancels back to action menu
-			// (the scout was only simulated, not committed)
+			// Undo the simulated insert and cancel
+			m.undoSimulatedScout()
 			m.isScoutAndShow = false
+			m.uiPhase = UIPhaseChooseAction
+			m.selected = nil
+			m.statusMsg = ""
+			return m, nil
 		}
-		if m.engine.Table.Combo != nil || m.isScoutAndShow {
+		if m.engine.Table.Combo != nil {
 			m.uiPhase = UIPhaseChooseAction
 			m.selected = nil
 			m.statusMsg = ""
@@ -241,6 +241,25 @@ func (m GameModel) handleShowSelect(key string) (GameModel, tea.Cmd) {
 		return m, nil
 	}
 	return m, nil
+}
+
+// getScoutedEntry returns the HandEntry that would be scouted based on current scout params.
+func (m GameModel) getScoutedEntry() engine.HandEntry {
+	var entry engine.HandEntry
+	if m.scoutFromLeft {
+		entry = m.engine.Table.Entries[0]
+	} else {
+		entry = m.engine.Table.Entries[len(m.engine.Table.Entries)-1]
+	}
+	if m.scoutFlip {
+		entry = entry.FlippedEntry()
+	}
+	return entry
+}
+
+// undoSimulatedScout removes the card that was visually inserted during Scout & Show.
+func (m *GameModel) undoSimulatedScout() {
+	m.engine.Players[m.humanID].Hand.RemoveRange(m.savedScoutInsertAt, 1)
 }
 
 // selectedIndices returns the sorted indices of selected cards.
@@ -275,7 +294,9 @@ func (m GameModel) executeShow() (GameModel, tea.Cmd) {
 	showCount := len(indices)
 
 	if m.isScoutAndShow {
-		// Build a ScoutAndShow action
+		// Undo the simulated insert so the engine can apply ScoutAndShow atomically
+		m.undoSimulatedScout()
+
 		action := engine.Action{
 			Type:          engine.ActionScoutAndShow,
 			ScoutFromLeft: m.savedScoutFromLeft,
@@ -285,6 +306,9 @@ func (m GameModel) executeShow() (GameModel, tea.Cmd) {
 			ShowCount:     showCount,
 		}
 		if err := m.engine.ApplyAction(action); err != nil {
+			// Re-insert the card so user can retry selection
+			entry := m.getScoutedEntry()
+			_ = m.engine.Players[m.humanID].Hand.Insert(entry, m.savedScoutInsertAt)
 			m.statusMsg = "Invalid: " + err.Error()
 			m.statusIsError = true
 			return m, tickCmd(2000*1000000, ClearStatusMsg{})
@@ -372,13 +396,18 @@ func (m GameModel) handleScoutInsert(key string) (GameModel, tea.Cmd) {
 
 func (m GameModel) executeScout() (GameModel, tea.Cmd) {
 	if m.isScoutAndShow {
-		// Save scout params; don't submit to engine yet.
-		// The engine handles ScoutAndShow atomically in ApplyAction.
+		// Save scout params for the final ScoutAndShow action.
 		m.savedScoutFromLeft = m.scoutFromLeft
 		m.savedScoutFlip = m.scoutFlip
 		m.savedScoutInsertAt = m.cursor
 
-		m.statusMsg = "Scout saved! Now select cards to Show."
+		// Simulate inserting the scouted card into hand so the user can see
+		// and select it during the Show phase. The engine's ApplyAction for
+		// ScoutAndShow will handle the real state atomically.
+		entry := m.getScoutedEntry()
+		_ = m.engine.Players[m.humanID].Hand.Insert(entry, m.cursor)
+
+		m.statusMsg = "Card scouted! Now select cards to Show."
 		m = m.enterShowSelect()
 		return m, nil
 	}

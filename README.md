@@ -36,7 +36,7 @@ scout_cli
 
 - 3-5 player games (you vs AI bots)
 - Full Scout rules: double-sided cards, Show / Scout / Scout & Show actions
-- Greedy and Random AI strategies
+- Smart AI with tactical awareness and defensive play
 - Colorful card rendering in terminal
 - Multi-round scoring with final leaderboard
 
@@ -88,7 +88,7 @@ scout_cli
 
 - 支持 3-5 人游戏（你 vs AI 对手）
 - 完整的 Scout 规则：双面牌、出牌 / 招募 / 双重行动
-- 贪心和随机两种 AI 策略
+- 具备攻防意识的智能 AI，懂得保留强牌与战术防守
 - 终端内彩色扑克牌渲染
 - 多轮计分与最终排行榜
 

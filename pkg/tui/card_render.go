@@ -64,11 +64,25 @@ func renderHand(hand *engine.Hand, cursor int, selected []bool) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, cards...)
 }
 
-// renderHandWithInsert renders the hand with a red insert-position indicator.
+// renderHandWithInsert renders the hand with the scouted card preview at the insert position.
 func renderHandWithInsert(hand *engine.Hand, insertPos int, scoutFromLeft bool, scoutFlip bool, table engine.TableState) string {
+	// Build the scouted card entry for preview
+	var scoutedEntry engine.HandEntry
+	if len(table.Entries) > 0 {
+		if scoutFromLeft {
+			scoutedEntry = table.Entries[0]
+		} else {
+			scoutedEntry = table.Entries[len(table.Entries)-1]
+		}
+		if scoutFlip {
+			scoutedEntry = scoutedEntry.FlippedEntry()
+		}
+	}
+
+	preview := renderCard(scoutedEntry, cardInsertPreviewBorder)
+
 	if hand.Len() == 0 {
-		marker := insertMarker()
-		return marker
+		return preview
 	}
 
 	entries := hand.Entries()
@@ -76,29 +90,16 @@ func renderHandWithInsert(hand *engine.Hand, insertPos int, scoutFromLeft bool, 
 
 	for i, e := range entries {
 		if i == insertPos {
-			parts = append(parts, insertMarker())
+			parts = append(parts, preview)
 		}
 		parts = append(parts, renderCard(e, cardNormalBorder))
 	}
 	// Insert at the end
 	if insertPos >= hand.Len() {
-		parts = append(parts, insertMarker())
+		parts = append(parts, preview)
 	}
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
-}
-
-// insertMarker returns a red vertical line with arrow for insert position.
-func insertMarker() string {
-	line := lipgloss.NewStyle().Foreground(colorRed).Bold(true)
-	content := lipgloss.JoinVertical(lipgloss.Center,
-		line.Render("│"),
-		line.Render("▼"),
-		line.Render("│"),
-		line.Render("│"),
-		line.Render("│"),
-	)
-	return lipgloss.NewStyle().MarginLeft(0).MarginRight(0).Render(content)
 }
 
 // renderTableCombo renders the current table combo.
