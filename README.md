@@ -12,9 +12,19 @@ Play against AI opponents right in your terminal with a colorful TUI powered by 
 
 ## Install
 
+**Quick install** (macOS / Linux):
+
+```bash
+curl -sL https://raw.githubusercontent.com/daghlny/scout_cli/main/install.sh | sh
+```
+
+**With Go**:
+
 ```bash
 go install github.com/daghlny/scout_cli@latest
 ```
+
+**Manual download**: grab the binary for your platform from [GitHub Releases](https://github.com/daghlny/scout_cli/releases).
 
 Then run:
 
@@ -54,9 +64,19 @@ For full rules, see: https://boardgamegeek.com/boardgame/291453/scout
 
 ## 安装
 
+**一键安装**（macOS / Linux，无需 Go 环境）：
+
+```bash
+curl -sL https://raw.githubusercontent.com/daghlny/scout_cli/main/install.sh | sh
+```
+
+**有 Go 环境**：
+
 ```bash
 go install github.com/daghlny/scout_cli@latest
 ```
+
+**手动下载**：从 [GitHub Releases](https://github.com/daghlny/scout_cli/releases) 下载对应平台的二进制文件（支持 macOS / Linux / Windows）。
 
 运行：
 
