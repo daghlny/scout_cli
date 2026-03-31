@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -9,7 +10,10 @@ import (
 )
 
 func main() {
-	app := tui.NewApp()
+	aiMode := flag.String("ai", "smart", "AI mode: smart or llm")
+	flag.Parse()
+
+	app := tui.NewApp(*aiMode)
 	p := tea.NewProgram(app, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

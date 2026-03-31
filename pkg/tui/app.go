@@ -19,14 +19,16 @@ type AppModel struct {
 	gameModel     GameModel
 	roundEndModel RoundEndModel
 	gameOverModel GameOverModel
+	aiMode        string
 	width         int
 	height        int
 }
 
-func NewApp() AppModel {
+func NewApp(aiMode string) AppModel {
 	return AppModel{
 		screen:    ScreenMenu,
 		menuModel: NewMenuModel(),
+		aiMode:    aiMode,
 	}
 }
 
@@ -75,7 +77,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m AppModel) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case StartGameMsg:
-		gm, cmd := NewGameModel(msg.NumPlayers)
+		gm, cmd := NewGameModel(msg.NumPlayers, m.aiMode)
 		gm.width = m.width
 		gm.height = m.height
 		m.gameModel = gm

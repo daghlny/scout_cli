@@ -37,8 +37,26 @@ scout_cli
 - 3-5 player games (you vs AI bots)
 - Full Scout rules: double-sided cards, Show / Scout / Scout & Show actions
 - Smart AI with tactical awareness and defensive play
+- **LLM AI mode**: powered by DeepSeek, with function calling and chain-of-thought reasoning
 - Colorful card rendering in terminal
 - Multi-round scoring with final leaderboard
+
+## AI Modes
+
+**Default (Smart AI)**:
+
+```bash
+scout_cli
+```
+
+**LLM AI** — each bot calls a large language model to decide its move:
+
+```bash
+export DEEPSEEK_API_KEY=your_key
+scout_cli -ai=llm
+```
+
+The LLM receives game rules, current hand, table state, and action history, then reasons through function calling. Falls back to Smart AI automatically on API errors.
 
 ## Game Rules
 
@@ -89,8 +107,26 @@ scout_cli
 - 支持 3-5 人游戏（你 vs AI 对手）
 - 完整的 Scout 规则：双面牌、出牌 / 招募 / 双重行动
 - 具备攻防意识的智能 AI，懂得保留强牌与战术防守
+- **LLM AI 模式**：由 DeepSeek 大模型驱动，通过 function calling 和思维链推理做出决策
 - 终端内彩色扑克牌渲染
 - 多轮计分与最终排行榜
+
+## AI 模式
+
+**默认（Smart AI）**：
+
+```bash
+scout_cli
+```
+
+**LLM AI** — 每个 bot 调用大语言模型来决策：
+
+```bash
+export DEEPSEEK_API_KEY=your_key
+scout_cli -ai=llm
+```
+
+LLM 会接收游戏规则、当前手牌、桌面状态和历史行动记录，通过 function calling 进行结构化推理。API 出错时自动回退到 Smart AI。
 
 ## 游戏规则
 

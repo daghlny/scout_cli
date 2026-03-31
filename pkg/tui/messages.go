@@ -33,9 +33,20 @@ type GameOverMsg struct{}
 // ClearStatusMsg clears the status message.
 type ClearStatusMsg struct{}
 
+// AIActionDoneMsg signals that an AI action's result has been displayed long enough.
+type AIActionDoneMsg struct{}
+
+// AIComputedMsg carries the result of an async AI computation (for LLM bots).
+type AIComputedMsg struct {
+	PlayerID int
+	Action   engine.Action
+	Error    string // non-empty if LLM failed (fallback was used)
+}
+
 // StartGameMsg starts a new game with the given config.
 type StartGameMsg struct {
 	NumPlayers int
+	AIMode     string
 }
 
 // tickCmd returns a command that fires after a delay.
@@ -47,5 +58,9 @@ func tickCmd(d time.Duration, msg tea.Msg) tea.Cmd {
 
 // aiDelayCmd schedules an AI turn with a visual delay.
 func aiDelayCmd(playerID int) tea.Cmd {
-	return tickCmd(400*time.Millisecond, AITurnMsg{PlayerID: playerID})
+	return tickCmd(600*time.Millisecond, AITurnMsg{PlayerID: playerID})
+}
+
+func aiActionDoneCmd() tea.Cmd {
+	return tickCmd(1200*time.Millisecond, AIActionDoneMsg{})
 }

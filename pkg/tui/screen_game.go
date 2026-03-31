@@ -3,11 +3,13 @@ package tui
 import (
 	"fmt"
 	"math/rand"
+	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/daghlny/scout_cli/pkg/ai"
 	"github.com/daghlny/scout_cli/pkg/engine"
+	"github.com/daghlny/scout_cli/pkg/llm"
 )
 
 // UIPhase tracks the multi-step human interaction flow.
@@ -47,21 +49,43 @@ type GameModel struct {
 	height        int
 }
 
-func NewGameModel(numPlayers int) (GameModel, tea.Cmd) {
+func NewGameModel(numPlayers int, aiMode string) (GameModel, tea.Cmd) {
 	rng := rand.New(rand.NewSource(rand.Int63()))
 
 	names := make([]string, numPlayers)
 	names[0] = "You"
-	botNames := []string{"Alice 🤖", "Bob 🤖", "Carol 🤖", "Dave 🤖"}
-	for i := 1; i < numPlayers; i++ {
-		names[i] = botNames[i-1]
+	if aiMode == "llm" {
+		botNames := []string{"Alice 🧠", "Bob 🧠", "Carol 🧠", "Dave 🧠"}
+		for i := 1; i < numPlayers; i++ {
+			names[i] = botNames[i-1]
+		}
+	} else {
+		botNames := []string{"Alice 🤖", "Bob 🤖", "Carol 🤖", "Dave 🤖"}
+		for i := 1; i < numPlayers; i++ {
+			names[i] = botNames[i-1]
+		}
 	}
 
 	g, _ := engine.NewGame(numPlayers, names, rng)
 
 	bots := make([]ai.Strategy, numPlayers)
-	for i := 1; i < numPlayers; i++ {
-		bots[i] = ai.NewSmartBot(rand.New(rand.NewSource(rng.Int63())))
+	if aiMode == "llm" {
+		apiKey := os.Getenv("DEEPSEEK_API_KEY")
+		if apiKey == "" {
+			// Fallback to smart if no API key
+			for i := 1; i < numPlayers; i++ {
+				bots[i] = ai.NewSmartBot(rand.New(rand.NewSource(rng.Int63())))
+			}
+		} else {
+			client := llm.NewDeepSeekClient(apiKey)
+			for i := 1; i < numPlayers; i++ {
+				bots[i] = ai.NewLLMBot(client, rand.New(rand.NewSource(rng.Int63())))
+			}
+		}
+	} else {
+		for i := 1; i < numPlayers; i++ {
+			bots[i] = ai.NewSmartBot(rand.New(rand.NewSource(rng.Int63())))
+		}
 	}
 
 	m := GameModel{
@@ -81,6 +105,10 @@ func (m GameModel) Update(msg tea.Msg) (GameModel, tea.Cmd) {
 		return m.handleKey(msg)
 	case AITurnMsg:
 		return m.handleAITurn(msg)
+	case AIComputedMsg:
+		return m.handleAIComputed(msg)
+	case AIActionDoneMsg:
+		return m.handleAIActionDone()
 	case ClearStatusMsg:
 		m.statusMsg = ""
 		m.statusIsError = false
@@ -459,18 +487,81 @@ func (m GameModel) handleAITurn(msg AITurnMsg) (GameModel, tea.Cmd) {
 		return m, nil
 	}
 
+	playerName := m.engine.Players[pid].Name
+	m.statusMsg = fmt.Sprintf("%s is thinking...", playerName)
+	m.uiPhase = UIPhaseWaitingForAI
+
+	// Capture state needed for the async computation
 	bot := m.bots[pid]
-	action := bot.ChooseAction(m.engine, pid)
+	// Make a snapshot of engine pointer for the goroutine
+	eng := m.engine
+
+	// Run bot decision asynchronously via Cmd
+	return m, func() tea.Msg {
+		action := bot.ChooseAction(eng, pid)
+		errMsg := ""
+		if lb, ok := bot.(*ai.LLMBot); ok && lb.LastError != "" {
+			errMsg = lb.LastError
+		}
+		return AIComputedMsg{
+			PlayerID: pid,
+			Action:   action,
+			Error:    errMsg,
+		}
+	}
+}
+
+func (m GameModel) handleAIComputed(msg AIComputedMsg) (GameModel, tea.Cmd) {
+	pid := msg.PlayerID
+	if pid != m.engine.CurrentPlayer {
+		return m, nil
+	}
 
 	playerName := m.engine.Players[pid].Name
-	m.statusMsg = fmt.Sprintf("%s chose %s", playerName, action.Type.String())
 
-	if err := m.engine.ApplyAction(action); err != nil {
+	// Show error briefly if LLM failed (fallback was used)
+	if msg.Error != "" {
+		m.statusMsg = fmt.Sprintf("%s LLM error: %s (used fallback)", playerName, msg.Error)
+		m.statusIsError = true
+	}
+
+	if err := m.engine.ApplyAction(msg.Action); err != nil {
 		m.statusMsg = fmt.Sprintf("%s error: %s", playerName, err.Error())
 		m.statusIsError = true
 		return m, nil
 	}
 
+	// Record action for LLM bots' context
+	for _, bot := range m.bots {
+		if lb, ok := bot.(*ai.LLMBot); ok {
+			lb.RecordAction(playerName, msg.Action, m.engine)
+		}
+	}
+
+	// Build descriptive status (overwrite error if action succeeded)
+	if msg.Error == "" {
+		switch msg.Action.Type {
+		case engine.ActionShow:
+			if m.engine.Table.Combo != nil {
+				m.statusMsg = fmt.Sprintf("%s played %s (%d cards)",
+					playerName, m.engine.Table.Combo.Type.String(), m.engine.Table.Combo.Size())
+			} else {
+				m.statusMsg = fmt.Sprintf("%s played cards", playerName)
+			}
+		case engine.ActionScout:
+			m.statusMsg = fmt.Sprintf("%s scouted a card", playerName)
+		case engine.ActionScoutAndShow:
+			m.statusMsg = fmt.Sprintf("%s used Scout & Show!", playerName)
+		}
+		m.statusIsError = false
+	}
+
+	return m, aiActionDoneCmd()
+}
+
+func (m GameModel) handleAIActionDone() (GameModel, tea.Cmd) {
+	m.statusMsg = ""
+	m.statusIsError = false
 	return m.afterAction()
 }
 
