@@ -15,13 +15,13 @@ type Client struct {
 	model  string
 }
 
-// NewDeepSeekClient creates a client configured for DeepSeek's API.
-func NewDeepSeekClient(apiKey string) *Client {
+// NewClient creates a client with the given base URL, API key, and model.
+func NewClient(baseURL, apiKey, model string) *Client {
 	config := openai.DefaultConfig(apiKey)
-	config.BaseURL = "https://api.deepseek.com/v1"
+	config.BaseURL = baseURL
 	return &Client{
 		client: openai.NewClientWithConfig(config),
-		model:  "deepseek-chat",
+		model:  model,
 	}
 }
 

@@ -70,14 +70,22 @@ func NewGameModel(numPlayers int, aiMode string) (GameModel, tea.Cmd) {
 
 	bots := make([]ai.Strategy, numPlayers)
 	if aiMode == "llm" {
-		apiKey := os.Getenv("DEEPSEEK_API_KEY")
+		baseURL := os.Getenv("OPENAI_BASE_URL")
+		apiKey := os.Getenv("OPENAI_API_KEY")
+		model := os.Getenv("OPENAI_MODEL")
+		if baseURL == "" {
+			baseURL = "https://api.openai.com/v1"
+		}
+		if model == "" {
+			model = "gpt-4o"
+		}
 		if apiKey == "" {
 			// Fallback to smart if no API key
 			for i := 1; i < numPlayers; i++ {
 				bots[i] = ai.NewSmartBot(rand.New(rand.NewSource(rng.Int63())))
 			}
 		} else {
-			client := llm.NewDeepSeekClient(apiKey)
+			client := llm.NewClient(baseURL, apiKey, model)
 			for i := 1; i < numPlayers; i++ {
 				bots[i] = ai.NewLLMBot(client, rand.New(rand.NewSource(rng.Int63())))
 			}
@@ -251,7 +259,7 @@ func (m GameModel) handleShowSelect(key string) (GameModel, tea.Cmd) {
 		}
 	case "enter":
 		return m.executeShow()
-	case "escape":
+	case "esc":
 		if m.isScoutAndShow {
 			// Undo the simulated insert and cancel
 			m.undoSimulatedScout()
@@ -262,9 +270,14 @@ func (m GameModel) handleShowSelect(key string) (GameModel, tea.Cmd) {
 			return m, nil
 		}
 		if m.engine.Table.Combo != nil {
+			// Can go back to action menu
 			m.uiPhase = UIPhaseChooseAction
 			m.selected = nil
 			m.statusMsg = ""
+		} else {
+			// Table empty = must show, but clear selections
+			m.selected = make([]bool, hand.Len())
+			m.statusMsg = "Table is empty — you must Show. Selections cleared."
 		}
 		return m, nil
 	}
@@ -372,7 +385,7 @@ func (m GameModel) handleScoutEnd(key string) (GameModel, tea.Cmd) {
 		m.uiPhase = UIPhaseScoutFlip
 		m.statusMsg = "Flip the card? (f)lip / (k)eep"
 		return m, nil
-	case "escape", "q":
+	case "esc", "q":
 		m.uiPhase = UIPhaseChooseAction
 		m.statusMsg = ""
 		return m, nil
@@ -386,7 +399,7 @@ func (m GameModel) handleScoutFlip(key string) (GameModel, tea.Cmd) {
 		m.scoutFlip = true
 	case "k", "enter":
 		m.scoutFlip = false
-	case "escape", "q":
+	case "esc", "q":
 		m.uiPhase = UIPhaseScoutEnd
 		m.statusMsg = "Scout: press ← for left card, → for right card."
 		return m, nil
@@ -414,9 +427,9 @@ func (m GameModel) handleScoutInsert(key string) (GameModel, tea.Cmd) {
 		}
 	case "enter":
 		return m.executeScout()
-	case "escape", "q":
-		m.uiPhase = UIPhaseScoutFlip
-		m.statusMsg = "Flip the card? (f)lip / (k)eep"
+	case "esc", "q":
+		m.uiPhase = UIPhaseScoutEnd
+		m.statusMsg = "Scout: press ← for left card, → for right card."
 		return m, nil
 	}
 	return m, nil

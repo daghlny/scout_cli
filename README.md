@@ -37,7 +37,7 @@ scout_cli
 - 3-5 player games (you vs AI bots)
 - Full Scout rules: double-sided cards, Show / Scout / Scout & Show actions
 - Smart AI with tactical awareness and defensive play
-- **LLM AI mode**: powered by DeepSeek, with function calling and chain-of-thought reasoning
+- **LLM AI mode**: works with any OpenAI-compatible API (OpenAI, DeepSeek, Ollama, etc.)
 - Colorful card rendering in terminal
 - Multi-round scoring with final leaderboard
 
@@ -52,8 +52,29 @@ scout_cli
 **LLM AI** — each bot calls a large language model to decide its move:
 
 ```bash
-export DEEPSEEK_API_KEY=your_key
+export OPENAI_API_KEY=your_key
 scout_cli -ai=llm
+```
+
+Works with any OpenAI-compatible API. Configure via environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OPENAI_BASE_URL` | API endpoint | `https://api.openai.com/v1` |
+| `OPENAI_API_KEY` | API key | (required) |
+| `OPENAI_MODEL` | Model name | `gpt-4o` |
+
+Examples:
+
+```bash
+# OpenAI
+OPENAI_API_KEY=sk-xxx scout_cli -ai=llm
+
+# DeepSeek
+OPENAI_BASE_URL=https://api.deepseek.com/v1 OPENAI_API_KEY=sk-xxx OPENAI_MODEL=deepseek-chat scout_cli -ai=llm
+
+# Local Ollama
+OPENAI_BASE_URL=http://localhost:11434/v1 OPENAI_API_KEY=ollama OPENAI_MODEL=llama3 scout_cli -ai=llm
 ```
 
 The LLM receives game rules, current hand, table state, and action history, then reasons through function calling. Falls back to Smart AI automatically on API errors.
@@ -107,7 +128,7 @@ scout_cli
 - 支持 3-5 人游戏（你 vs AI 对手）
 - 完整的 Scout 规则：双面牌、出牌 / 招募 / 双重行动
 - 具备攻防意识的智能 AI，懂得保留强牌与战术防守
-- **LLM AI 模式**：由 DeepSeek 大模型驱动，通过 function calling 和思维链推理做出决策
+- **LLM AI 模式**：支持任意 OpenAI 兼容接口（OpenAI、DeepSeek、Ollama 等）
 - 终端内彩色扑克牌渲染
 - 多轮计分与最终排行榜
 
@@ -122,8 +143,29 @@ scout_cli
 **LLM AI** — 每个 bot 调用大语言模型来决策：
 
 ```bash
-export DEEPSEEK_API_KEY=your_key
+export OPENAI_API_KEY=your_key
 scout_cli -ai=llm
+```
+
+支持任意 OpenAI 兼容接口，通过环境变量配置：
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `OPENAI_BASE_URL` | API 地址 | `https://api.openai.com/v1` |
+| `OPENAI_API_KEY` | API 密钥 | （必填） |
+| `OPENAI_MODEL` | 模型名称 | `gpt-4o` |
+
+示例：
+
+```bash
+# OpenAI
+OPENAI_API_KEY=sk-xxx scout_cli -ai=llm
+
+# DeepSeek
+OPENAI_BASE_URL=https://api.deepseek.com/v1 OPENAI_API_KEY=sk-xxx OPENAI_MODEL=deepseek-chat scout_cli -ai=llm
+
+# 本地 Ollama
+OPENAI_BASE_URL=http://localhost:11434/v1 OPENAI_API_KEY=ollama OPENAI_MODEL=llama3 scout_cli -ai=llm
 ```
 
 LLM 会接收游戏规则、当前手牌、桌面状态和历史行动记录，通过 function calling 进行结构化推理。API 出错时自动回退到 Smart AI。
